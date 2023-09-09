@@ -1,0 +1,61 @@
+stages:
+  lint:
+    enabled: false
+
+  package: 
+    enabled: true
+    helmDir: deploy
+    additionalRepos:
+      - name: bitnami
+        url: https://charts.bitnami.com/bitnami
+
+  publish:
+    enabled: true
+
+  deploy:
+    enabled: false
+    name: oddsbender
+    kubernetesConfig:
+      name: oddsbender-cluster
+      region: us-east-1
+      credentialsId: jenkins-aws
+
+  version:
+    versionUpdates:
+      - type: yaml
+        file: deploy/values.yaml
+        path: basketball.image.tag
+      - type: yaml
+        file: deploy/values.yaml
+        path: football.image.tag
+      - type: yaml
+        file: deploy/values.yaml
+        path: dataLoader.image.tag
+      - type: yaml
+        file: deploy/values.yaml
+        path: master.image.tag
+      - type: yaml
+        file: deploy/Chart.yaml
+        path: version
+      - type: yaml
+        file: deploy/Chart.yaml
+        path: appVersion
+
+
+environments:
+  dev:
+    stages:
+      deploy:
+        namespace: dev-oddsbender
+        configFiles:
+          - conf-deploy/common.values.yaml
+          - conf-deploy/development.values.yaml
+          - conf-deploy/development.scrapers.yaml
+  prod:
+    stages:
+      deploy:
+        namespace: prod-oddsbender
+        configFiles:
+          - conf-deploy/common.values.yaml
+          - conf-deploy/production.values.yaml
+          - conf-deploy/production.scrapers.yaml

@@ -1,0 +1,39 @@
+{{- if .Values.scaleCron.enabled }}
+{{range .Values.scaleCron.jobs}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.name}}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  schedule: {{.schedule | quote}}
+  successfulJobsHistoryLimit: {{ .successfulJobsHistoryLimit | default 0 }}
+  failedJobsHistoryLimit: {{ .failedJobsHistoryLimit | default 1 }}
+  concurrencyPolicy: {{ .concurrencyPolicy | default "Forbid" }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .backoffLimit | default 0 }}
+      template:
+        spec: 
+          serviceAccountName: {{ include "oddsbender-scrapers.serviceAccountName" $ }}
+          containers:
+            - name: scale-deployment
+              image: bitnami/kubectl:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - /home/scripts/scale_deployments.sh
+              args:
+                - {{.replicas | quote}}
+              volumeMounts:
+                - name: scripts-volume
+                  mountPath: /home/scripts
+          volumes:
+            - name: scripts-volume
+              configMap:
+                name: {{ include "oddsbender-scrapers.fullname" $ }}-script-configmap
+                defaultMode: 0744
+          restartPolicy: Never
+---
+{{- end }}
+{{- end }}

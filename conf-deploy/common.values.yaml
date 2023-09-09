@@ -1,0 +1,184 @@
+basketball:
+  image: 
+    repository: 157485876214.dkr.ecr.us-east-2.amazonaws.com/basketball
+    imagePullPolicy: Always
+  command: 
+    - python3
+
+football:
+  image: 
+    repository: 157485876214.dkr.ecr.us-east-2.amazonaws.com/football
+    imagePullPolicy: Always
+  master:
+    command: 
+      - python3
+    args:
+      - master.py 
+  command: 
+    - python3
+
+dataLoader:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  command:
+    - python3
+  args:
+    - db_data_loader.py
+
+master:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  command: 
+    - python3
+  args:
+    - master.py 
+  resources:
+    requests:
+      cpu: 500m
+      memory: "1Gi"
+    limits:
+      cpu: 1
+      memory: "5Gi"
+
+redis:
+  sentinel:
+    enabled: false
+  auth:
+   existingSecret: redis-password
+   existingSecretPasswordKey: password
+  master:
+    disableCommands: []
+    nodeSelector:
+      role: db
+    tolerations:
+      - key : application-type/db
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+    extraVolumes:
+      - name: redis-secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: redis-auth
+    extraVolumeMounts:
+      - name: redis-secrets-store
+        mountPath: /app
+        readOnly: true
+
+  replica:
+    nodeSelector:
+      role: db
+    tolerations:
+      - key : application-type/db
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: 100m
+        memory: 1Gi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+    affinity: {}
+    extraVolumes:
+      - name: redis-secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: redis-auth
+    extraVolumeMounts:
+      - name: redis-secrets-store
+        mountPath: /app
+        readOnly: true
+  pdb:
+    create: true
+
+redisinsight-chart:
+  enabled: false
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/auth-realm: Authentication Required
+      nginx.ingress.kubernetes.io/auth-secret: basic-auth
+      nginx.ingress.kubernetes.io/auth-type: basic
+  nodeSelector:
+    role: system
+
+rabbitmq:
+  replicaCount: 3
+  nodeSelector:
+    role: db
+  tolerations:
+    - key : application-type/db
+      effect: NoSchedule
+  auth:
+    username: user
+    existingPasswordSecret: rabbitmq-password
+    existingErlangSecret: rabbitmq-erlangsecret
+    # auth:
+    #   existingPasswordSecret: rabbitmq-authentication
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls: true
+  resources:
+    requests:
+      cpu: .5
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 1Gi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 15s
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9419"
+  serviceAccount:
+    name: rabbitmq
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/rabbit-mq-kube-sa
+  # extraEnvVarsSecret: rabbitmq-authentication
+  pdb:
+    create: true
+  customReadinessProbe:
+    exec:
+      command:
+      - /bin/bash
+      - -ec
+      - rabbitmq-diagnostics -q ping
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    successThreshold: 1
+    timeoutSeconds: 20
+  extraConfiguration: |-
+    consumer_timeout = 10800000
+  extraVolumes:
+    - name: rabbitmq-secrets-store
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: rabbitmq-auth
+  extraVolumeMounts:
+    - name: rabbitmq-secrets-store
+      mountPath: /app
+      readOnly: true
+
+      

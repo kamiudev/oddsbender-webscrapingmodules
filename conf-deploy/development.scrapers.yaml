@@ -1,0 +1,85 @@
+scrapers:
+  - sportsbook: barstool
+    basketballEnabled: false
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: barstool
+    propArgs:
+      - master.py
+    popularArgs:
+      - barstoolpopular.py
+    urlArgs:
+      - barstool_url.py
+  - sportsbook: bet365
+    basketballEnabled: false
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: bet365
+    propArgs:
+      - master.py
+    popularArgs:
+      - bet365popular.py
+    urlArgs:
+      - bet365_url.py
+  - sportsbook: betmgm
+    basketballEnabled: true
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: betmgm
+    propArgs:
+      - betmgmprop.py
+    popularArgs:
+      - betmgmpopular.py
+    urlArgs:
+      - betmgm_url.py
+  - sportsbook: caesars
+    basketballEnabled: false
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: caesars
+    propArgs:
+      - caesarsprop.py
+    popularArgs:
+      - caesarspopular.py
+    urlArgs:
+      - caesars_url.py
+  - sportsbook: draftkings
+    basketballEnabled: false
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: draftkings
+    propArgs:
+      - draftkingsprop.py
+    popularArgs:
+      - draftkingspopular.py
+    urlArgs:
+      - draftkings_url.py
+  - sportsbook: fanduel
+    basketballEnabled: false
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: fanduel
+    propArgs:
+      - fanduelprop.py
+    popularArgs:
+      - fanduelpopular.py
+    urlArgs:
+      - fanduel_url.py
+  - sportsbook: sugarhouse
+    basketballEnabled: false
+    footballEnabled: false
+    env:
+      - name: sportsbook
+        value: sugarhouse
+    propArgs:
+      - sugarhouseprop.py
+    popularArgs:
+      - sugarhousepopular.py
+    urlArgs:
+      - sugarhouse_url.py

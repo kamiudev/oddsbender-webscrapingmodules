@@ -1,0 +1,186 @@
+basketball:
+  enabled: true
+  image: 
+    tag: dev
+  popular:
+    enabled: true
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 10
+    resources:
+      requests:
+        cpu: 2
+        memory: "3Gi"
+      limits:
+        cpu: 2
+        memory: "6Gi"
+  prop:
+    enabled: true
+    replicaCount: 1
+    tolerations:
+      - key: application-type/scraper
+        operator: Exists
+        effect: NoSchedule
+    nodeSelector:
+      node-type: scraper-node
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 10
+    keda:
+      enabled: true
+      pollingInteval: 10
+      cooldownPeriod: 15
+      idleReplicaCount: 0
+      minReplicaCount: 0
+      maxReplicaCount: 2
+      trigger:
+        host: http://user:6t4aKQlnAcOY15U7SdLk9oX@dev-oddsbender-rabbitmq.dev-oddsbender.svc.cluster.local:15672/
+    resources:
+      requests:
+        cpu: 1.5
+        memory: "2Gi"
+      limits:
+        cpu: 2
+        memory: "4Gi" 
+  url:
+    resources:
+      requests:
+        cpu: 1
+        memory: "2Gi"
+      limits:
+        cpu: 2
+        memory: "4Gi"
+  env:
+    - name: LOG_DEBUG_FLAG
+      value: "1"
+    - name: PROP_LOG_DEBUG_FLAG
+      value: "1" 
+    - name: URL_LOG_DEBUG_FLAG
+      value: "1"
+    - name: "POPULAR_LOG_DEBUG_FLAG"
+      value: "1"
+    - name: "POPULAR_LOG_LEVEL"
+      value: "WARNING"
+    - name: basketball_sugarhouse_url_log_level
+      value: "INFO"
+
+dataLoader:
+  enabled: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: "1Gi"
+    limits:
+      cpu: 2
+      memory: "2Gi"
+
+redis:
+  replica:
+    replicaCount: 1
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/oddsbender-application-dev
+  extraDeploy: 
+  - apiVersion: secrets-store.csi.x-k8s.io/v1
+    kind: SecretProviderClass
+    metadata:
+      name: redis-auth
+    spec:
+      provider: aws
+      parameters:
+        objects: |
+          - objectName: oddsbender-backend-dev
+            objectType: secretsmanager
+            jmesPath: 
+              - path: redis_pass
+                objectAlias: redis_pass
+      secretObjects:
+        - data:
+          - key: password
+            objectName: redis_pass
+          secretName: redis-password
+          type: Opaque
+      
+
+redisinsight-chart:
+  ingress:
+    hosts:
+      - host: dev.redis.oddsbender.com
+        paths: 
+          - /
+    tls:
+    - secretName: redis-insights-secret
+      hosts:
+        - dev.redis.oddsbender.com
+
+rabbitmq:
+  ingress:
+    hostname: dev-rabbitmq.oddsbender.com
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/oddsbender-application-dev
+  extraDeploy: 
+  - apiVersion: secrets-store.csi.x-k8s.io/v1
+    kind: SecretProviderClass
+    metadata:
+      name: rabbitmq-auth
+    spec:
+      provider: aws
+      parameters:
+        objects: |
+          - objectName: oddsbender-backend-dev
+            objectType: secretsmanager
+            jmesPath: 
+              - path: rabbitmq_password
+                objectAlias: rabbitmq_password
+              - path: rabbitmq_erlangCookie
+                objectAlias: rabbitmq_erlangCookie
+      secretObjects:
+        - data:
+          - key: rabbitmq-password
+            objectName: rabbitmq_password
+          secretName: rabbitmq-password
+          type: Opaque
+        - data:
+          - key: rabbitmq-erlang-cookie
+            objectName: rabbitmq_erlangCookie
+          secretName: rabbitmq-erlangsecret
+          type: Opaque
+
+scaleCron:
+  enabled: true
+  jobs:
+    - name:  scale-down
+      replicas: 0
+      schedule:  "0 4 * * *"
+    - name: scale-up-weekday
+      replicas: 1
+      schedule: "0 22 * * *"
+    - name: scale-up-weekend
+      replicas: 1
+      schedule: "0 16 * * 6,0"
+
+redisCleanUp:
+  enabled: false
+
+podCleanup:
+  enabled: false
+
+config:
+  redis_host: dev-oddsbender-redis-master.dev-oddsbender.svc.cluster.local
+  redis_port: 6379
+  postgres_user: webscraper
+  postgres_host: oddsbender-db.c4dlrrpgutuq.us-east-1.rds.amazonaws.com
+  postgres_port: 5432
+  postgres_dbname: webscraper-data-development
+  amqp_host: amqp://dev-oddsbender-rabbitmq.dev-oddsbender.svc.cluster.local
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/oddsbender-application-dev
+
+secretStore:
+  secretName: oddsbender-backend-dev

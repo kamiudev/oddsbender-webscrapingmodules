@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployment-scaler
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "oddsbender-scrapers.serviceAccountName" . }}
+roleRef:
+  kind: Role
+  name: scale-deployments
+  apiGroup: rbac.authorization.k8s.io

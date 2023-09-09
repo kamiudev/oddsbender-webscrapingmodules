@@ -1,0 +1,34 @@
+{{- if .Values.podCleanup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" . }}-pod-cleanup-cron
+  namespace: {{ $.Release.Namespace }}
+spec:
+  schedule: '*/5 * * * *'
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec: 
+          serviceAccountName: {{ include "oddsbender-scrapers.serviceAccountName" . }}
+          containers:
+            - name: pod-cleanup
+              image: bitnami/kubectl:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - /home/scripts/cleanup_pods.sh
+              volumeMounts:
+                - name: scripts-volume
+                  mountPath: /home/scripts
+          volumes:
+            - name: scripts-volume
+              configMap:
+                name: {{ include "oddsbender-scrapers.fullname" . }}-script-configmap
+                defaultMode: 0744
+          restartPolicy: OnFailure
+          nodeSelector:
+              role: system
+{{- end }}

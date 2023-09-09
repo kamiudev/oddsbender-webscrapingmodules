@@ -1,0 +1,341 @@
+{{- if (eq .Values.football.enabled true)}}
+{{range .Values.scrapers}}
+{{- if and $.Values.football.popular.enabled .footballEnabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football
+  labels:
+    {{- include "oddsbender-scrapers.labels" $ | nindent 4 }}
+    sportsbook: {{.sportsbook}}
+    sport: football
+    type: popular
+    app: {{.sportsbook}}-popular
+spec:
+  {{- if not $.Values.football.popular.autoscaling.enabled }}
+  replicas: {{.replicaCount | default $.Values.football.popular.replicaCount}}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "oddsbender-scrapers.labels" $ | nindent 6 }}
+      sportsbook: {{.sportsbook}}
+      sport: football
+      type: popular
+      app: {{.sportsbook}}-popular
+  template:
+    metadata:
+      {{- with $.Values.football.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "oddsbender-scrapers.labels" $ | nindent 8 }}
+        sportsbook: {{.sportsbook}}
+        sport: football
+        type: popular
+        app: {{.sportsbook}}-popular
+    spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "oddsbender-scrapers.serviceAccountName" $ }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: popular
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{$.Values.football.image.repository}}:{{$.Values.football.image.tag}}"
+          imagePullPolicy: {{ $.Values.football.image.imagePullPolicy}}
+          command: {{ .popularCommand | default $.Values.football.command }}
+          args: {{ .popularArgs | default $.Values.args }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: sport
+              value: football
+          {{- if .env }}
+          {{- range $name, $value := .env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- if $.Values.football.env }}
+          {{- range $name, $value := $.Values.football.env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{include "oddsbender-scrapers.fullname" $ }}-scraper-config
+            - secretRef:
+                name: {{include "oddsbender-scrapers.fullname" $}}-scraper-secret-config
+          resources:
+            {{- toYaml $.Values.football.popular.resources | nindent 12}}
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+            - name: secrets-store
+              mountPath: /app/config
+              readOnly: true
+        - name: url
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{$.Values.football.image.repository}}:{{$.Values.football.image.tag}}"
+          imagePullPolicy: {{.imagePullPolicy | default $.Values.football.image.imagePullPolicy}}
+          command: {{ .urlCommand | default $.Values.football.command }}
+          args: {{ .urlArgs | default $.Values.args }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+          {{- if .env }}
+          {{- range $name, $value := .env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- if $.Values.football.env }}
+          {{- range $name, $value := $.Values.football.env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+            - name: sport
+              value: football
+          envFrom:
+            - configMapRef:
+                name: {{include "oddsbender-scrapers.fullname" $ }}-scraper-config
+            - secretRef:
+                name: {{include "oddsbender-scrapers.fullname" $}}-scraper-secret-config
+          resources:
+            {{- toYaml $.Values.football.url.resources | nindent 12}}
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+            - name: secrets-store
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{include "oddsbender-scrapers.fullname" $}}-scraper-secrets
+      {{- with $.Values.football.popular.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.football.popular.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.football.popular.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- if (eq $.Values.football.popular.autoscaling.enabled true) }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-popular-hpa
+  labels:
+    {{- include "oddsbender-scrapers.labels" $ | nindent 4 }}
+    sportbook: {{.sportsbook}}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football
+  minReplicas: {{ .autoscaling.minReplicas | default $.Values.football.autoscaling.minReplicas}}
+  maxReplicas: {{ .autoscaling.maxReplicas | default $.Values.football.autoscaling.maxReplicas}}
+  metrics:
+    {{- if or (eq $.Values.football.autoscaling.targetCPUUtilizationPercentage true) (.autoscaling.targetCPUUtilizationPercentage true) }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{ .autoscaling.targetCPUUtilizationPercentage | default $.Values.football.autoscaling.targetCPUUtilizationPercentage}}
+    {{- end }}
+    {{- if or (eq $.Values.football.autoscaling.targetMemoryUtilizationPercentage true) (.autoscaling.targetMemoryUtilizationPercentage true) }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{ .autoscaling.targetMemoryUtilizationPercentage | default $.Values.football.autoscaling.targetMemoryUtilizationPercentage}}
+    {{- end }}
+{{- end }}
+---
+{{- if and $.Values.football.prop.enabled .footballEnabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football-prop
+  labels:
+    {{- include "oddsbender-scrapers.labels" $ | nindent 4 }}
+    sportsbook: {{.sportsbook}}
+    sport: football
+    type: prop
+    app: {{.sportsbook}}-prop
+spec:
+  {{- if not $.Values.football.prop.autoscaling.enabled }}
+  replicas: {{.replicaCount | default $.Values.football.prop.replicaCount}}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "oddsbender-scrapers.labels" $ | nindent 6 }}
+      sportsbook: {{.sportsbook}}
+      sport: football
+      app: {{.sportsbook}}-prop
+      type: prop
+  template:
+    metadata:
+      {{- with $.Values.football.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "oddsbender-scrapers.labels" $ | nindent 8 }}
+        sportsbook: {{.sportsbook}}
+        sport: football
+        app: {{.sportsbook}}-prop
+        type: prop
+    spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "oddsbender-scrapers.serviceAccountName" $ }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: prop
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{$.Values.football.image.repository}}:{{$.Values.football.image.tag}}"
+          imagePullPolicy: {{.imagePullPolicy | default $.Values.football.image.imagePullPolicy}}
+          command: {{ .propCommand | default $.Values.football.command }}
+          args: {{ .propArgs | default $.Values.args }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: sport
+              value: football
+          {{- if .env }}
+          {{- range $name, $value := .env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- if $.Values.football.env }}
+          {{- range $name, $value := $.Values.football.env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{include "oddsbender-scrapers.fullname" $ }}-scraper-config
+            - secretRef:
+                name: {{include "oddsbender-scrapers.fullname" $}}-scraper-secret-config
+          resources:
+            {{- toYaml $.Values.football.prop.resources | nindent 12}}
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+            - name: secrets-store
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{include "oddsbender-scrapers.fullname" $ }}-scraper-secrets
+      {{- with $.Values.football.prop.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.football.prop.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.football.prop.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- if (eq $.Values.football.prop.autoscaling.enabled true) }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football-prop-hpa
+  labels:
+    {{- include "oddsbender-scrapers.labels" $ | nindent 4 }}
+    sportbook: {{.sportsbook}}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football-prop
+  minReplicas: {{ $.Values.football.prop.autoscaling.minReplicas | default "1" }}
+  maxReplicas: {{ $.Values.football.prop.autoscaling.maxReplicas | default "1" }}
+  metrics:
+    {{- if ($.Values.football.prop.autoscaling.targetCPUUtilizationPercentage ) }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{ $.Values.football.prop.autoscaling.targetCPUUtilizationPercentage | default "90"  }}
+    {{- end }}
+    {{- if ($.Values.football.prop.autoscaling.targetMemoryUtilizationPercentage ) }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{$.Values.football.prop.autoscaling.targetMemoryUtilizationPercentage | default "90" }}
+    {{- end }}
+{{- end }}
+---
+{{- if (eq $.Values.football.prop.keda.enabled true) }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football-prop
+spec:
+  scaleTargetRef:
+    name: {{ include "oddsbender-scrapers.fullname" $ }}-{{.sportsbook}}-football-prop
+  pollingInternval: {{ $.Values.football.prop.keda.pollingInternval}}
+  cooldownPeriod: {{ $.Values.football.prop.keda.cooldownPeriod}}
+  idleReplicaCount: {{ $.Values.football.prop.keda.idleReplicaCount}}
+  minReplicaCount: {{ $.Values.football.prop.keda.minReplicaCount}}
+  maxReplicaCount: {{ $.Values.football.prop.keda.maxReplicaCount}}
+  triggers:
+    - type: rabbitmq
+      metadata:
+        host: {{ $.Values.football.prop.keda.trigger.host}}
+        queueName: {{ .sportsbook }}
+        mode: QueueLength
+        metricName: gamesInQueue
+        value: "1"
+{{- end}}
+---
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+
+

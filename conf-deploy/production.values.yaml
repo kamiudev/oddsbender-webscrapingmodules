@@ -1,0 +1,313 @@
+basketball:
+  enabled: false
+  image:
+    tag: latest
+  popular:
+    enabled: true
+    replicaCount: 1
+    autoscaling: 
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 10
+    resources:
+      requests:
+        cpu: 2
+        memory: "3Gi"
+      limits:
+        cpu: 2
+        memory: "5Gi"
+  prop:
+    enabled: false
+    replicaCount: 1
+    tolerations:
+      - key: application-type/scraper
+        operator: Exists
+        effect: NoSchedule
+    nodeSelector:
+      node-type: scraper-node
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 10
+    keda:
+      enabled: true
+      pollingInteval: 10
+      cooldownPeriod: 15
+      idleReplicaCount: 0
+      minReplicaCount: 0
+      maxReplicaCount: 40
+      trigger:
+        host: http://user:SbyWnDB4IIkNzpF2cdVCcFlQj@oddsbender-rabbitmq.prod-oddsbender.svc.cluster.local:15672/
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        cpu: 3
+        memory: 5Gi
+  url:
+    resources:
+      requests:
+        cpu: 3
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: "5Gi"
+  env:
+    - name: basketball_betmgm_url_log_level
+      value: "INFO" 
+    - name: basketball_betmgmpopular_log_level
+      value: "INFO"
+    - name: basketball_betmgmprop_log_level
+      value: "INFO" 
+    - name: basketball_caesars_url_log_level
+      value: "WARNING" 
+    - name: basketball_caesarspopular_log_level
+      value: "INFO" 
+    - name: basketball_caesarsprop_log_level
+      value: "INFO" 
+    - name: basketball_db_data_loader_log_level
+      value: "INFO" 
+    - name: basketball_draftkings_url_log_level
+      value: "INFO" 
+    - name: basketball_draftkingspopular_log_level
+      value: "INFO" 
+    - name: basketball_draftkingsprop_log_level
+      value: "INFO" 
+    - name: basketball_fanduel_url_log_level
+      value: "INFO" 
+    - name: basketball_fanduelpopular_log_level
+      value: "INFO" 
+    - name: basketball_fanduelprop_log_level
+      value: "INFO" 
+    - name: basketball_sugarhouse_url_log_level
+      value: "INFO" 
+    - name: basketball_sugarhouse_popular_log_level
+      value: "INFO" 
+    - name: basketball_sugarhouseprop_log_level
+      value: "INFO" 
+    - name: basketball_master_log_level
+      value: "INFO" 
+    
+    # - name: URL_LOG_DEBUG_FLAG
+    #   value: "1"
+    # - name: "POPULAR_LOG_DEBUG_FLAG"
+    #   value: "1"
+    # - name: "POPULAR_LOG_LEVEL"
+    #   value: "WARNING"
+    # - name: basketball_db_data_loader_DEBUG_FLAG
+    #   value: "1"
+
+football:
+  enabled: true
+  image:
+    tag: latest
+  popular:
+    enabled: true
+    replicaCount: 1
+    autoscaling: 
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 10
+    resources:
+      requests:
+        cpu: 2
+        memory: "3Gi"
+      limits:
+        cpu: 2
+        memory: "5Gi"
+  prop:
+    enabled: false
+    replicaCount: 1
+    tolerations:
+      - key: application-type/scraper
+        operator: Exists
+        effect: NoSchedule
+    nodeSelector:
+      node-type: scraper-node
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 10
+    keda:
+      enabled: false
+      pollingInteval: 10
+      cooldownPeriod: 15
+      idleReplicaCount: 0
+      minReplicaCount: 0
+      maxReplicaCount: 40
+      trigger:
+        host: http://user:SbyWnDB4IIkNzpF2cdVCcFlQj@oddsbender-rabbitmq.prod-oddsbender.svc.cluster.local:15672/
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        cpu: 3
+        memory: 5Gi
+  url:
+    resources:
+      requests:
+        cpu: 3
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: "5Gi"
+  env:
+    - name: football_betmgm_url_log_level
+      value: "INFO" 
+    - name: football_betmgmpopular_log_level
+      value: "INFO"
+    - name: football_betmgmprop_log_level
+      value: "INFO" 
+    - name: football_caesars_url_log_level
+      value: "WARNING" 
+    - name: football_caesarspopular_log_level
+      value: "INFO" 
+    - name: football_caesarsprop_log_level
+      value: "INFO" 
+    - name: football_db_data_loader_log_level
+      value: "INFO" 
+    - name: football_draftkings_url_log_level
+      value: "INFO" 
+    - name: football_draftkingspopular_log_level
+      value: "INFO" 
+    - name: football_draftkingsprop_log_level
+      value: "INFO" 
+    - name: football_fanduel_url_log_level
+      value: "INFO" 
+    - name: football_fanduelpopular_log_level
+      value: "INFO" 
+    - name: football_fanduelprop_log_level
+      value: "INFO" 
+    - name: football_sugarhouse_url_log_level
+      value: "INFO" 
+    - name: football_sugarhouse_popular_log_level
+      value: "INFO" 
+    - name: football_sugarhouseprop_log_level
+      value: "INFO" 
+    - name: football_master_log_level
+      value: "INFO" 
+
+master:
+  enabled: false
+
+dataLoader:
+  enabled: true
+  resources:
+    requests:
+      cpu: 2
+      memory: "3Gi"
+    limits:
+      cpu: 4
+      memory: "5Gi"
+
+redis:
+  enabled: true
+  replica:
+    replicaCount: 3
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/oddsbender-application
+  extraDeploy: 
+  - apiVersion: secrets-store.csi.x-k8s.io/v1
+    kind: SecretProviderClass
+    metadata:
+      name: redis-auth
+    spec:
+      provider: aws
+      parameters:
+        objects: |
+          - objectName: oddsbender-backend-prod
+            objectType: secretsmanager
+            jmesPath: 
+              - path: redis_pass
+                objectAlias: redis_pass
+      secretObjects:
+        - data:
+          - key: password
+            objectName: redis_pass
+          secretName: redis-password
+          type: Opaque
+
+redisinsight-chart:
+  ingress:
+    hosts:
+      - host: redis.oddsbender.com
+        paths: 
+          - /
+    tls:
+    - secretName: redis-insights-secret
+      hosts:
+        - redis.oddsbender.com
+
+rabbitmq:
+  enabled: false
+  ingress:
+    hostname: rabbitmq.oddsbender.com
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/oddsbender-application
+  extraDeploy: 
+  - apiVersion: secrets-store.csi.x-k8s.io/v1
+    kind: SecretProviderClass
+    metadata:
+      name: rabbitmq-auth
+    spec:
+      provider: aws
+      parameters:
+        objects: |
+          - objectName: oddsbender-backend-prod
+            objectType: secretsmanager
+            jmesPath: 
+              - path: rabbitmq_password
+                objectAlias: rabbitmq_password
+              - path: rabbitmq_erlangCookie
+                objectAlias: rabbitmq_erlangCookie
+      secretObjects:
+        - data:
+          - key: rabbitmq-password
+            objectName: rabbitmq_password
+          secretName: rabbitmq-password
+          type: Opaque
+        - data:
+          - key: rabbitmq-erlang-cookie
+            objectName: rabbitmq_erlangCookie
+          secretName: rabbitmq-erlangsecret
+          type: Opaque
+
+scaleCron:
+  enabled: true
+  jobs:
+    - name:  scale-down
+      replicas: 0
+      schedule:  "0 5 * * *"
+    - name: scale-up-weekday
+      replicas: 1
+      schedule: "0 23 * * *"
+    - name: scale-up-weekend
+      replicas: 1
+      schedule: "0 17 * * 6,0"
+
+redisCleanUp:
+  enabled: false
+
+podCleanup:
+  enabled: false
+
+config:
+  redis_host: oddsbender-redis-master.prod-oddsbender.svc.cluster.local
+  redis_port: 6379
+  postgres_user: webscraper
+  postgres_host: oddsbender-db.c4dlrrpgutuq.us-east-1.rds.amazonaws.com
+  postgres_port: 5432
+  postgres_dbname: webscraper-data
+  amqp_host: amqp://oddsbender-rabbitmq.prod-oddsbender.svc.cluster.local
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::157485876214:role/oddsbender-application
+
+secretStore:
+  secretName: oddsbender-backend-prod

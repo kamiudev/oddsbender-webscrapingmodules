@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{include "oddsbender-scrapers.fullname" . }}-scraper-config
+data:
+  redis_host: {{.Values.config.redis_host}}
+  redis_port: {{.Values.config.redis_port | quote}}
+  postgres_user: {{.Values.config.postgres_user}}
+  postgres_host: {{.Values.config.postgres_host}}
+  postgres_dbname: {{.Values.config.postgres_dbname}}
+  postgres_port: {{.Values.config.postgres_port | quote}}
+  amqp_host: {{.Values.config.amqp_host}}
+  db_data_loader_popular_table: {{.Values.config.db_data_loader_popular_table}}
+  db_data_loader_props_table: {{.Values.config.db_data_loader_props_table}}
+  db_data_loader_error_table: {{.Values.config.db_data_loader_error_table}}

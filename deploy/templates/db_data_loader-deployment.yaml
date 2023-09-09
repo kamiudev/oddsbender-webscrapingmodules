@@ -1,0 +1,86 @@
+{{if .Values.dataLoader.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "oddsbender-scrapers.fullname" . }}-data-loader
+  labels:
+    {{- include "oddsbender-scrapers.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.dataLoader.autoscaling.enabled }}
+  replicas: {{.Values.dataLoader.replicaCount}}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "oddsbender-scrapers.labels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "oddsbender-scrapers.labels" . | nindent 8 }}
+        sport: basketball
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "oddsbender-scrapers.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: data-loader
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{.Values.dataLoader.image.repository}}:{{.Values.dataLoader.image.tag}}"
+          imagePullPolicy: {{.Values.dataLoader.image.imagePullPolicy}}
+          command: {{ .Values.dataLoader.command }}
+          args: {{ .Values.dataLoader.args }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+          {{- if .Values.dataLoader.env }}
+          {{- range $name, $value := .Values.dataLoader.env }}
+            - name: {{ $value.name }}
+              value: {{ $value.value | quote }}
+          {{- end }}
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{include "oddsbender-scrapers.fullname" . }}-scraper-config
+            - secretRef:
+                name: {{include "oddsbender-scrapers.fullname" . }}-scraper-secret-config
+          resources:
+            {{- toYaml .Values.dataLoader.resources | nindent 12}}
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+            - name: secrets-store
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{include "oddsbender-scrapers.fullname" . }}-scraper-secrets
+      {{- with .Values.dataLoader.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dataLoader.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dataLoader.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

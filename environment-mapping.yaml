@@ -1,0 +1,4 @@
+- branchNamePattern: (feature/.*|develop)
+  environment: dev
+- branchNamePattern: master
+  environment: prod
